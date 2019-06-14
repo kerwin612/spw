@@ -1,0 +1,159 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Author: ileler@qq.com
+import os
+import sys
+import getopt
+
+#password-file path
+pf = os.path.expanduser('~/.spw.pf')
+
+#password map
+ps = {}
+
+#command-option
+option = None
+
+verbose = False
+
+def usage():
+    print('''
+Usage:%s [option] command host [parameters]
+
+ option:
+
+     -h or --help: show help info
+
+     -f password-file
+
+     -o command-option
+
+     -v verbose
+
+ command: 
+     set #set password
+     get #get password
+     ssh #wrap sshpass to exec ssh
+     scp #wrap sshpass to exec scp
+
+ host: 
+     from ssh_config's Host 
+
+ example:
+     %s set localhost password  #set localhost's password
+      -  set localhost  #remove localhost's password
+      -  get localhost  #get localhost's password
+      -  ssh localhost  #ssh connect localhost
+      -  ssh localhost arg1 arg2    #ssh connect localhost with args
+      -  -o '-p 22' ssh localhost arg1 arg2     #ssh connect localhost with options and args
+      -  -vo '-p 22' ssh localhost arg1 arg2    #-v show verbose
+
+    ''' % (sys.argv[0], sys.argv[0]))
+
+
+def getPid(host, withUser=True, withPort=True):
+    #lines = subprocess.check_output(['ssh', '-G', 'zl'])
+    lines = os.popen('ssh -G %s' % host).read()
+    configs = {}
+    for line in lines.splitlines():
+        kv = line.split(' ')
+        configs[kv[0]] = kv[1] if len(kv) > 1 else None
+    hostname, user, port = (configs['hostname'], configs['user'], configs['port'])
+    pid = hostname
+    if user and withUser:
+        pid = '%s@%s' % (user, pid)
+    if port and withPort:
+        pid = '%s:%s' % (pid, port)
+    return pid
+
+
+def getPwd(host):
+    pid = getPid(host)
+    pwd = ps.get(pid, None)
+    if verbose: print("get %s 's password = %s" % (pid, pwd))
+    if pwd is None:
+        pid = getPid(host, withPort=False)
+        pwd = ps.get(pid, None)
+        if verbose: print("get %s 's password = %s" % (pid, pwd))
+    if pwd is None:
+        pid = getPid(host, withUser=False, withPort=False)
+        pwd = ps.get(pid, None)
+        if verbose: print("get %s 's password = %s" % (pid, pwd))
+    return pwd
+
+
+def setPwd(host, pwd):
+    pid = getPid(host)
+    if pwd is None:
+        ps.pop(pid, None)
+    else:
+        ps[pid] = pwd
+    savePwds()
+    return pid
+
+
+def loadPwds():
+    if not os.path.exists(pf):
+        return
+    with open(pf) as f:
+        for line in f:
+            if '=' in line:
+                k, v = line.split('=', 1)
+                ps[k.strip()] = v.strip()
+
+
+def savePwds():
+    if not os.path.exists(pf):
+        os.makedirs(os.path.dirname(pf))
+    with open(pf, 'w') as f:
+        for k in ps:
+            f.write('%s=%s\n' % (k, ps.get(k))) 
+
+
+def spw(host, command, parameters=None):
+    pwd = getPwd(host)
+    if pwd is None:
+        print('password unset')
+        sys.exit()
+    cmd = 'sshpass -p %s %s %s %s %s' % (pwd, command, option if option else '', host, ' '.join(str(param) for param in parameters) if parameters else '')
+    if verbose: print(cmd)
+    os.system(cmd)
+
+
+try:
+    opts, args = getopt.getopt(sys.argv[1:] if len(sys.argv) > 1 else [], 'hf:o:v', ['help'])
+    cmd, arg = opts[0] if len(opts) > 0 and len(args) > 1 else ('-h', None)
+    if len(opts) > 0:
+        for c, a in opts:
+            if c in ('-h', '--help'):
+                usage()
+                sys.exit()
+            elif c == '-f':
+                if not os.path.exists(a):
+                    print('password-file unexists')
+                    sys.exit()
+                pf = a
+            elif c == '-o':
+                option = a
+            elif c == '-v':
+                verbose = True
+    if len(args) > 1:
+        loadPwds()
+        host = args[1]
+        command = args[0]
+        parameters = args[2:] if len(args) > 2 else []
+        if command == 'set':
+            pwd = parameters[0] if len(parameters) > 0 else None
+            print("set %s 's password = %s" % (setPwd(host, pwd), pwd))
+        elif command == 'get':
+            print("get %s 's password = %s" % (getPid(host), getPwd(host)))
+        else:
+            spw(host, command, parameters)
+        sys.exit()
+    elif len(args) == 1:
+        print('miss host')
+    else:
+        print('miss command and host')
+except getopt.GetoptError:
+    print('argv error, please input')
+    usage()
