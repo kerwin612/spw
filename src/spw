@@ -24,7 +24,7 @@ Usage:%s [option] command host [parameters]
 
      -h or --help: show help info
 
-     -f password-file
+     -f password-file, default is '~/.spw.pf'
 
      -o command-option
 
@@ -103,7 +103,7 @@ def loadPwds():
 
 
 def savePwds():
-    if not os.path.exists(pf):
+    if not os.path.exists(pf) and not os.path.exists(os.path.dirname(pf)):
         os.makedirs(os.path.dirname(pf))
     with open(pf, 'w') as f:
         for k in ps:
@@ -129,9 +129,6 @@ try:
                 usage()
                 sys.exit()
             elif c == '-f':
-                if not os.path.exists(a):
-                    print('password-file unexists')
-                    sys.exit()
                 pf = a
             elif c == '-o':
                 option = a
@@ -142,6 +139,9 @@ try:
         host = args[1]
         command = args[0]
         parameters = args[2:] if len(args) > 2 else []
+        if command != 'set' and not os.path.exists(pf):
+            print('password-file unexists')
+            sys.exit()
         if command == 'set':
             pwd = parameters[0] if len(parameters) > 0 else None
             print("set %s 's password = %s" % (setPwd(host, pwd), pwd))

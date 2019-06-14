@@ -13,7 +13,7 @@ Usage:spw [option] command host [parameters]
 
      -h or --help: show help info
 
-     -f password-file
+     -f password-file, default is '~/.spw.pf'
 
      -o command-option
 

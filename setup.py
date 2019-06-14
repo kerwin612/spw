@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="sshpass-wrapper",
-    version="0.0.1",
+    version="0.0.2",
     author="ileler",
     author_email="kerwin612@qq.com",
     description="A wrapper for sshpass",
