@@ -53,7 +53,7 @@ Usage:%s [option] command host [parameters]
 
 def getPid(host, withUser=True, withPort=True):
     #lines = subprocess.check_output(['ssh', '-G', 'zl'])
-    lines = os.popen('ssh -G %s' % host).read()
+    lines = os.popen('ssh -G %s' % (host.split(':')[0])).read()
     configs = {}
     for line in lines.splitlines():
         kv = line.split(' ')
