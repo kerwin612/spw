@@ -1,9 +1,9 @@
 # spw
 
-A wrap for sshpass
+A wrapper for `sshpass`
 
 To install `spw`, use pip:  
-`pip install spw`  
+`pip install sshpass-wrapper`  
 then, run with `spw`  
 
 ```
